@@ -1,14 +1,16 @@
 // ==UserScript==
 // @name            OTRS refresh =D
 // @namespace       http://tampermonkey.net/
-// @version         1.0.2
+// @license			MIT
+// @version         1.0.3
 // @description     Auto-Refresh OTRS
 // @author          Marcelo_Valvassori_Bittencourt
-// @copyright     	2019, Marcelo_Valvassori_Bittencourt (https://openuserjs.org/users/Marcelo_Valvassori_Bittencourt)
+// @copyright     	2021, Marcelo Valvassori Bittencourt (https://openuserjs.org/users/marcelo.valvassori)
 // @namespace       mbitts.com
-// @homepageURL     https://openuserjs.org/users/Marcelo_Valvassori_Bittencourt
+// @homepageURL     https://openuserjs.org/users/marcelo.valvassori
 // @match           http://otrs.1cta.eb.mil.br/otrs/index.pl?Action=AgentDashboard
 // @grant           none
+// @contributionURL https://github.com/bitts/otrs-bot.js
 // @icon            https://otrs.com/favicon-16x16.png
 // ==/UserScript==
 
@@ -17,7 +19,21 @@
 (function(){
     'use strict';
 
+    $(document).ready(function () {
+        $(document).on('DOMContentLoaded', function () {
+            if (!Notification) {
+                console.log('Desktop notifications are not available in your browser.');
+                return;
+            }
+            if (Notification.permission !== 'granted') {
+                Notification.requestPermission();
+            }
+        });
+    });
+
 	var jOTRS = {
+
+        me : 'Adj SGO 2 Ten Bittencourt',
 
 		debug : true,
 		default_time : 5,
@@ -27,12 +43,14 @@
 		    'author' : 'Marcelo Valvassori Bittencourt',
 		    'supportURL':'http://mbitts.com/scripts/jOTRS.js',
 		    'create':'2020-04-13',
+            'lastUpdate':'2021-06-05',
 		    'description':'Refresh page into defined minuts.',
 		    'name':'[HK]jOTRS Refresh',
 		    'namespace':'mbitts.com'
 		},
 
 		version : [
+            {'1.0.3':'Notificação Desktop para Firefox (site inseguro necessita habilitar).'},
 		    {'1.0.2':'Contador regressivo.'},
 		    {'1.0.2':'Adicionando como caixa de menu padrão do OTRS'},
 		    {'1.0.1':'Adicionando uma interface simples de apresentacao fixed to botton.'},
@@ -43,6 +61,7 @@
 		    //jOTRS.interface_old();
 		    jOTRS.interface_otrs();
 		    jOTRS.contagem();
+            jOTRS.newTickets();
 		},
 
 		min : function(){
@@ -57,7 +76,7 @@
 		log : function(txt){
 		    if(jOTRS.debug){
 			let tm = new Date().toLocaleString();
-			console.log(tm, txt);
+                console.log(tm, txt);
 		    }
 		},
 
@@ -199,7 +218,6 @@
 				date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
 				expires = "; expires=" + date.toGMTString();
 			}
-
 			document.cookie = name + "=" + value + expires + "; path=/";
 		},
 
@@ -216,11 +234,98 @@
 
 		eraseCookie : function(name) {
 			jOTRS.createCookie(name, "", -1);
-		}
+		},
+
+        newTickets : function(){
+            jOTRS.log('Percorrendo tickets abertos')
+            var itens = $("div[id$='TicketOpen-box']").find("div[id$='TicketOpen']").find("table.DataTable > tbody > tr.MasterAction");
+            //console.log(itens.html());
+            $.map(itens, function(obj){
+                let gravidade = $(obj).find('td:eq(0)').find('div.Flag').attr('title');
+                let ticketid = $(obj).find('td:eq(2)').find('a').text();
+                let ticketurl = $(obj).find('td:eq(2)').find('a').attr('href');
+                let criado = $(obj).find('td:eq(3)').find('div').attr('title');
+                let idade = $(obj).find('td:eq(4)').find('div').attr('title');
+                let titulo = $(obj).find('td:eq(5)').find('div').attr('title');
+                let proprietario = $(obj).find('td:eq(6)').find('div').attr('title');
+
+                let object = {
+                    'gravidade' : gravidade,
+                    'ticketid' : ticketid,
+                    'ticketurl' : ticketurl,
+                    'criado': criado,
+                    'idade': idade,
+                    'titulo': titulo,
+                    'proprietario': proprietario
+                };
+                if(jOTRS.me == object.proprietario)
+                    jOTRS.showNotification('Ticket : [#'+ ticketid + ']('+ idade +') '+ titulo, ticketurl);
+            });
+
+        },
+
+        showNotification : function(texto, url) {
+            if (Notification.permission !== 'granted') {
+                Notification.requestPermission();
+            } else {
+                const options = {
+                    body: texto,
+                    dir: 'ltr',
+                    icon: 'https://otrs.com/favicon-32x32.png',
+                    tag: 'soManyNotification',
+                    img: 'https://otrs.com/apple-touch-icon.png',
+
+                };
+                const notification = new Notification('Notification', options);
+
+                if(url)notification.onclick = function () {
+                    window.open(url);
+                };
+            }
+        },
+
+        checkNotificationPromise : function() {
+            try {
+                Notification.requestPermission().then();
+            } catch(e) {
+                return false;
+            }
+
+            return true;
+        },
+
+        askNotificationPermission : function(title) {
+            // function to actually ask the permissions
+            function handlePermission(permission) {
+                // set the button to shown or hidden, depending on what the user answers
+                if(Notification.permission === 'denied' || Notification.permission === 'default') {
+                    //notificationBtn.style.display = 'block';
+                } else {
+                    //notificationBtn.style.display = 'none';
+                }
+            }
+
+            // Let's check if the browser supports notifications
+            if (!('Notification' in window)) {
+                console.log("This browser does not support notifications.");
+            } else {
+                if(jOTRS.checkNotificationPromise()) {
+                    Notification.requestPermission()
+                        .then((permission) => {
+                        handlePermission(permission);
+                    })
+                } else {
+                    Notification.requestPermission(function(permission) {
+                        handlePermission(permission);
+                    });
+                }
+                var img = 'https://upload.wikimedia.org/wikipedia/commons/d/da/Logo_OTRS.svg';
+                var text = 'HEY! Your task "' + title + '" is now overdue.';
+                var notification = new Notification('To do list', { body: text, icon: img });
+            }
+        }
 	};
 
     jOTRS.init();
 
 })();
-
-
