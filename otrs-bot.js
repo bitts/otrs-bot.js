@@ -33,7 +33,7 @@
 
     var jOTRS = {
 
-        me : 'Meu usuário',
+        me : 'Adj SGO 2 Ten Bittencourt',
 
 	debug : true,
 	default_time : 5,
@@ -43,7 +43,7 @@
 	    'author' : 'Marcelo Valvassori Bittencourt',
 	    'supportURL':'http://mbitts.com/scripts/jOTRS.js',
 	    'create':'2020-04-13',
-	    'lastUpdate':'2021-06-05',
+            'lastUpdate':'2021-06-05',
 	    'description':'Refresh page into defined minuts.',
 	    'name':'[HK]jOTRS Refresh',
 	    'namespace':'mbitts.com'
@@ -76,7 +76,7 @@
 	log : function(txt){
 	    if(jOTRS.debug){
 		let tm = new Date().toLocaleString();
-		console.log(tm, txt);
+	console.log(tm, txt);
 	    }
 	},
 
@@ -265,6 +265,48 @@
         },
 
         showNotification : function(texto, url) {
+            Notification.requestPermission(function(result) {
+                var notification;
+                if (result === 'granted') {
+                    notification = navigator.serviceWorker.ready.then(function(registration) {
+                        registration.showNotification('requireInteraction: true', {
+                            body: texto,
+                            dir: 'ltr',
+                            icon: 'https://otrs.com/favicon-32x32.png',
+                            img: 'https://otrs.com/apple-touch-icon.png',
+                            requireInteraction: true,
+                            tag: 'require-interaction'
+                        });
+
+                        registration.showNotification('requireInteraction: false', {
+                            body: texto,
+                            dir: 'ltr',
+                            icon: 'https://otrs.com/favicon-32x32.png',
+                            img: 'https://otrs.com/apple-touch-icon.png',
+                            requireInteraction: false,
+                            tag: 'no-require-interaction'
+                        });
+                    });
+
+                    if(!notification){
+                        var options = {
+                            body: texto,
+                            dir: 'ltr',
+                            icon: 'https://otrs.com/favicon-32x32.png',
+                            tag: 'soManyNotification',
+                            img: 'https://otrs.com/apple-touch-icon.png',
+                            requireInteraction: true,
+                            tag: 'require-interaction'
+                        };
+                        notification = new Notification('Notification', options);
+                    }
+                    if(url && notification)notification.onclick = function () {
+                        window.open(url);
+                    };
+                }
+            });
+
+
             if (Notification.permission !== 'granted') {
                 Notification.requestPermission();
             } else {
@@ -274,7 +316,8 @@
                     icon: 'https://otrs.com/favicon-32x32.png',
                     tag: 'soManyNotification',
                     img: 'https://otrs.com/apple-touch-icon.png',
-
+                    requireInteraction: true,
+                    tag: 'require-interaction'
                 };
                 const notification = new Notification('Notification', options);
 
@@ -283,7 +326,47 @@
                 };
             }
         },
-        
+
+        checkNotificationPromise : function() {
+            try {
+                Notification.requestPermission().then();
+            } catch(e) {
+                return false;
+            }
+
+            return true;
+        },
+
+        askNotificationPermission : function(title) {
+            // function to actually ask the permissions
+            function handlePermission(permission) {
+                // set the button to shown or hidden, depending on what the user answers
+                if(Notification.permission === 'denied' || Notification.permission === 'default') {
+                    //notificationBtn.style.display = 'block';
+                } else {
+                    //notificationBtn.style.display = 'none';
+                }
+            }
+
+            // Let's check if the browser supports notifications
+            if (!('Notification' in window)) {
+                console.log("This browser does not support notifications.");
+            } else {
+                if(jOTRS.checkNotificationPromise()) {
+                    Notification.requestPermission()
+                        .then((permission) => {
+                        handlePermission(permission);
+                    })
+                } else {
+                    Notification.requestPermission(function(permission) {
+                        handlePermission(permission);
+                    });
+                }
+                var img = 'https://upload.wikimedia.org/wikipedia/commons/d/da/Logo_OTRS.svg';
+                var text = 'HEY! Your task "' + title + '" is now overdue.';
+                var notification = new Notification('To do list', { body: text, icon: img });
+            }
+        }
     };
 
     jOTRS.init();
