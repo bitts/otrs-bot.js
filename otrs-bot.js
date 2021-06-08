@@ -33,7 +33,7 @@
 
     var jOTRS = {
 
-        me : 'Adj SGO 2 Ten Bittencourt',
+        me : 'Meu usuário do OTRS',
 
 	debug : true,
 	default_time : 5,
