@@ -1,5 +1,5 @@
 # Description
-OTRS refresh to online status
+Script [Tampermonkey](https://www.tampermonkey.net/) para [OTRS](https://otrs.com/) refresh to online status
 
 # Versions
   1.0.3 : Notificação Desktop para Firefox (site inseguro necessita habilitar).
@@ -11,3 +11,7 @@ OTRS refresh to online status
   1.0.1 : Adicionando uma interface simples de apresentacao "_fixed to botton_".
   
   1.0.0 : Atualização (_refresh_) da página principal com intervalo de tempo definidos em variáveis.
+
+
+# Uso
+https://www.tampermonkey.net/?ext=dhdg
